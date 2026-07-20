@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC-Ali — Лучшие железки с AliExpress</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800">
+
+    <header class="navbar bg-white shadow-sm border-b border-slate-100 sticky top-0 z-50">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <!-- Клик по логотипу сбрасывает фильтры -->
+            <a href="#" onclick="resetFilters(); return false;" class="text-2xl font-black tracking-tight text-primary flex items-center gap-2 cursor-pointer">
+                ⚡ <span class="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">PC-Ali</span>
+            </a>
+            <div class="flex gap-4">
+                <span class="text-sm text-slate-500 hidden sm:inline-block">Лучшие цены и подборки комплектующих</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <!-- Панель управления: Поиск и Категории -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8">
+            <div class="flex flex-col lg:flex-row gap-6 justify-between lg:items-center mb-6">
+                <h2 id="mainTitle" class="text-xl font-bold text-slate-800">Глобальный ТОП-50 предложений</h2>
+
+                <!-- Поиск DaisyUI -->
+                <div class="join w-full lg:w-96">
+                    <input type="text" id="searchInput" placeholder="Поиск железа (например: Ryzen, SSD)..."
+                           class="input input-bordered join-item w-full focus:outline-none" />
+                    <button onclick="triggerSearch()" class="btn btn-primary join-item">Найти</button>
+                </div>
+            </div>
+
+            <!-- Категории DaisyUI -->
+            <div class="flex flex-wrap gap-2" id="categoriesContainer">
+                <button onclick="filterByCategory('')" id="btn-all" class="btn btn-sm btn-primary">
+                    Все категории
+                </button>
+                <!-- Сюда JS подгрузит остальные категории -->
+            </div>
+        </div>
+
+        <!-- Инфо-панель перед товарами -->
+        <div class="flex items-center justify-between mb-4 px-1">
+            <span class="text-sm font-medium text-slate-500">Результаты подборки</span>
+            <span id="productCounter" class="badge badge-ghost font-medium">Загрузка...</span>
+        </div>
+
+        <!-- Сетка товаров -->
+        <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <!-- Карточки товаров генерируются через JS -->
+        </div>
+    </main>
+
+    <footer class="footer footer-center p-6 bg-slate-900 text-slate-400 border-t border-slate-800">
+        <aside>
+            <p class="font-bold text-slate-300">⚡ PC-Ali Aggregator © 2026</p>
+            <p>Все права защищены. Цены обновляются автоматически.</p>
+        </aside>
+    </footer>
+
+    <!-- Логика работы с API -->
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api/v1/catalog';
+        let currentCategory = '';
+        let currentSearch = '';
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadCategories();
+            loadProducts();
+
+            // Поиск по нажатию Enter
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') triggerSearch();
+            });
+        });
+
+        async function loadCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/categories/`);
+                const categories = await response.json();
+                const container = document.getElementById('categoriesContainer');
+
+                categories.forEach(cat => {
+                    const btn = document.createElement('button');
+                    btn.id = `btn-${cat.slug}`;
+                    btn.className = "btn btn-sm btn-outline btn-primary hover:text-white";
+                    btn.innerText = cat.name;
+                    btn.onclick = () => filterByCategory(cat.slug);
+                    container.appendChild(btn);
+                });
+            } catch (error) {
+                console.error("Ошибка загрузки категорий:", error);
+            }
+        }
+
+        async function loadProducts() {
+            const grid = document.getElementById('productsGrid');
+            const counter = document.getElementById('productCounter');
+
+            // Спиннер загрузки
+            grid.innerHTML = '<div class="col-span-full flex justify-center py-16"><span class="loading loading-spinner loading-lg text-primary"></span></div>';
+
+            let url = `${API_BASE}/products/?`;
+            if (currentCategory) url += `category=${currentCategory}&`;
+            if (currentSearch) url += `search=${encodeURIComponent(currentSearch)}&`;
+
+            try {
+                const response = await fetch(url);
+                const products = await response.json();
+
+                grid.innerHTML = '';
+                counter.innerText = `Найдено: ${products.length}`;
+
+                if (products.length === 0) {
+                    grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-500 font-medium">Ничего не найдено. Попробуйте другой запрос.</div>';
+                    return;
+                }
+
+                products.forEach(product => {
+                    // Расчет скидки
+                    let discountBadge = '';
+                    if (product.old_price && parseFloat(product.old_price) > parseFloat(product.price)) {
+                        const pct = Math.round(((product.old_price - product.price) / product.old_price) * 100);
+                        if (pct > 0) {
+                            discountBadge = `<div class="badge badge-error text-white font-bold absolute top-3 left-3 shadow-sm border-none">-${pct}%</div>`;
+                        }
+                    }
+
+                    // Создание карточки DaisyUI
+                    const card = document.createElement('div');
+                    card.className = "card bg-white shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 overflow-hidden group";
+
+                    card.innerHTML = `
+                        <figure class="relative pt-[100%] bg-slate-50 overflow-hidden">
+                            <img src="${product.image_url}" alt="${product.name}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            ${discountBadge}
+                            <div class="badge badge-success text-white font-bold absolute top-3 right-3 shadow-sm text-xs border-none bg-emerald-500">
+                                ★ ${parseFloat(product.internal_score).toFixed(1)}
+                            </div>
+                        </figure>
+                        <div class="card-body p-4 gap-2">
+                            <div class="text-[10px] font-bold text-primary uppercase tracking-wider">
+                                ${product.brand?.name || 'AliExpress'}
+                            </div>
+                            <h3 class="card-title text-sm font-medium text-slate-700 leading-snug line-clamp-2 min-h-[2.5rem]" title="${product.name}">
+                                ${product.name}
+                            </h3>
+                            <div class="flex items-baseline gap-2 mt-2">
+                                <span class="text-lg font-black text-slate-900">$${product.price}</span>
+                                ${product.old_price ? `<span class="text-xs text-slate-400 line-through font-medium">$${product.old_price}</span>` : ''}
+                            </div>
+                            <div class="card-actions mt-3 w-full">
+                                <a href="${product.redirect_url}" target="_blank" class="btn btn-primary btn-block btn-sm text-white shadow-sm">
+                                    В магазин
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+
+            } catch (error) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 text-error font-medium">Ошибка соединения с сервером API.</div>';
+                counter.innerText = 'Ошибка';
+            }
+        }
+
+        function filterByCategory(slug) {
+            currentCategory = slug;
+
+            const title = document.getElementById('mainTitle');
+            title.innerText = slug ? `Топ-50 в категории` : `Глобальный ТОП-50 предложений`;
+
+            const container = document.getElementById('categoriesContainer');
+            const buttons = container.getElementsByTagName('button');
+
+            for (let btn of buttons) {
+                btn.className = "btn btn-sm btn-outline btn-primary hover:text-white";
+            }
+
+            const activeBtn = document.getElementById(`btn-${slug || 'all'}`);
+            if (activeBtn) {
+                activeBtn.className = "btn btn-sm btn-primary";
+            }
+
+            loadProducts();
+        }
+
+        function triggerSearch() {
+            currentSearch = document.getElementById('searchInput').value.trim();
+            loadProducts();
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            currentSearch = '';
+            filterByCategory('');
+        }
+    </script>
+</body>
+</html>

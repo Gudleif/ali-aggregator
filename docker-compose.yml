@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:15-alpine
+    # Читаем переменные из .env
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    # Читаем переменные из .env
+    env_file:
+      - .env
+    # Мы изменили эту команду! Теперь Django запускается внутри папки src
+    command: python src/manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

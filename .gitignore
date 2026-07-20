@@ -1,0 +1,28 @@
+# Python и Django
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# База данных
+db.sqlite3
+
+# Docker
+.docker/
+
+# Медиа и статика (загруженные картинки)
+media/
+static/
+
+# IDE и редакторы
+.idea/
+.vscode/
+*.swp
+
+# Тяжелые данные для импорта
+*.csv
+src/goods.csv
