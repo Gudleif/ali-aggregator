@@ -2,6 +2,7 @@ import csv
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 from apps.catalog.models import Product, Category, Brand
+from django.core.cache import cache
 
 
 class Command(BaseCommand):
@@ -147,3 +148,6 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"Импорт успешно завершен! Создано товаров: {created_count}, Обновлено: {updated_count}"))
+        # Сброс всего кэша API после обновления каталога
+        cache.clear()
+        self.stdout.write(self.style.SUCCESS("Кэш Redis успешно очищен!"))

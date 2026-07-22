@@ -1,7 +1,10 @@
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework import viewsets
 from rest_framework.response import Response
-from rest_framework.filters import SearchFilter  # ИМПОРТИРУЕМ СТАНДАРТНЫЙ ПОИСК
+from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
+
 from apps.catalog.models import Product, Category, Brand
 from apps.catalog.serializers import ProductSerializer, CategorySerializer, BrandSerializer
 from apps.catalog.filters import ProductFilter
@@ -9,11 +12,9 @@ from apps.catalog.filters import ProductFilter
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ProductSerializer
-    # Добавляем SearchFilter в список бэкендов фильтрации
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = ProductFilter
 
-    # Указываем, по каким полям искать (по названию товара и по имени бренда)
     search_fields = ['name', 'brand__name']
 
     def get_queryset(self):
@@ -21,6 +22,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             .filter(is_active=True) \
             .order_by('-internal_score')
 
+    # Оборачиваем метод списка в кэш на 1 час (60 секунд * 60 минут)
+    @method_decorator(cache_page(60 * 60))
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         filtered_queryset = self.filter_queryset(queryset)
@@ -34,7 +37,17 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
+    # Кэшируем список категорий на 1 час
+    @method_decorator(cache_page(60 * 60))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
 
 class BrandViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Brand.objects.all()
     serializer_class = BrandSerializer
+
+    # Кэшируем список брендов на 1 час
+    @method_decorator(cache_page(60 * 60))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)

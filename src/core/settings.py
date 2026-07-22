@@ -1,5 +1,7 @@
 import environ
 from pathlib import Path
+import os
+from celery.schedules import crontab
 
 # BASE_DIR указывает на папку src/
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -115,3 +117,77 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Настройки Admitad
 ADMITAD_BASE_URL = env('ADMITAD_BASE_URL')
+
+# --- CELERY SETTINGS ---
+# Подтягиваем URL из переменных окружения (из файла .env)
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
+
+# Настройки сериализации (стандарт для безопасности и скорости)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# Устанавливаем часовой пояс для планировщика такой же, как в Django
+CELERY_TIMEZONE = TIME_ZONE
+
+# Расписание запуска задач (Celery Beat)
+CELERY_BEAT_SCHEDULE = {
+    'import_range_1': {
+        'task': 'apps.catalog.tasks.process_price_range_csv',
+        'schedule': crontab(hour=2, minute=0, day_of_week=1),
+        'args': (os.environ.get('ADMITAD_CSV_RANGE_1'), 'range_1'),
+    },
+    'import_range_2': {
+        'task': 'apps.catalog.tasks.process_price_range_csv',
+        'schedule': crontab(hour=2, minute=0, day_of_week=2),
+        'args': (os.environ.get('ADMITAD_CSV_RANGE_2'), 'range_2'),
+    },
+    'import_range_3': {
+        'task': 'apps.catalog.tasks.process_price_range_csv',
+        'schedule': crontab(hour=2, minute=0, day_of_week=3),
+        'args': (os.environ.get('ADMITAD_CSV_RANGE_3'), 'range_3'),
+    },
+    'import_range_4': {
+        'task': 'apps.catalog.tasks.process_price_range_csv',
+        'schedule': crontab(hour=2, minute=0, day_of_week=4),
+        'args': (os.environ.get('ADMITAD_CSV_RANGE_4'), 'range_4'),
+    },
+    'import_range_5': {
+        'task': 'apps.catalog.tasks.process_price_range_csv',
+        'schedule': crontab(hour=2, minute=0, day_of_week=5),
+        'args': (os.environ.get('ADMITAD_CSV_RANGE_5'), 'range_5'),
+    },
+    'import_range_6': {
+        'task': 'apps.catalog.tasks.process_price_range_csv',
+        'schedule': crontab(hour=2, minute=0, day_of_week=6),
+        'args': (os.environ.get('ADMITAD_CSV_RANGE_6'), 'range_6'),
+    },
+    'import_range_7': {
+        'task': 'apps.catalog.tasks.process_price_range_csv',
+        'schedule': crontab(hour=2, minute=0, day_of_week=0),
+        'args': (os.environ.get('ADMITAD_CSV_RANGE_7'), 'range_7'),
+    },
+    'import_range_8': {
+        'task': 'apps.catalog.tasks.process_price_range_csv',
+        'schedule': crontab(hour=4, minute=0, day_of_week=0),
+        'args': (os.environ.get('ADMITAD_CSV_RANGE_8'), 'range_8'),
+    },
+}
+
+# Настройки кэширования через Redis
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        # Убедись, что имя хоста совпадает с именем сервиса в docker-compose (например, redis или pc_redis)
+        # Цифра /1 в конце означает базу данных №1
+        "LOCATION": "redis://redis:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # Игнорировать ошибки кэша (если Redis вдруг упадет, сайт продолжит работать через обычную БД)
+            "IGNORE_EXCEPTIONS": True,
+        }
+    }
+}
+
+# Время жизни кэша по умолчанию (в секундах)
+CACHE_TTL = 60 * 60  # 1 час
