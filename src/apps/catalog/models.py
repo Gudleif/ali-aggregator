@@ -9,7 +9,7 @@ class Category(models.Model):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name='children',
+        related_name='subcategories',
         verbose_name="Parent Category"
     )
 

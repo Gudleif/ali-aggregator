@@ -3,9 +3,26 @@ from .models import Product, Category, Brand
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    """
+    Базовый сериализатор категории.
+    Используется для вывода плоских данных о подкатегории внутри товара
+    и для формирования вложенного списка подкатегорий в главном меню.
+    """
     class Meta:
         model = Category
         fields = ['id', 'name', 'slug']
+
+
+class CategoryTreeSerializer(serializers.ModelSerializer):
+    """
+    Древовидный сериализатор для вывода главного меню (Mega-Menu).
+    Автоматически подтягивает все дочерние категории через related_name='subcategories'.
+    """
+    subcategories = CategorySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'subcategories']
 
 
 class BrandSerializer(serializers.ModelSerializer):

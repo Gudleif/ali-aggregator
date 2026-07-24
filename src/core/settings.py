@@ -164,12 +164,12 @@ CELERY_BEAT_SCHEDULE = {
     },
     'import_range_7': {
         'task': 'apps.catalog.tasks.process_price_range_csv',
-        'schedule': crontab(hour=2, minute=0, day_of_week=0),
+        'schedule': crontab(hour=1, minute=0, day_of_week=0),
         'args': (os.environ.get('ADMITAD_CSV_RANGE_7'), 'range_7'),
     },
     'import_range_8': {
         'task': 'apps.catalog.tasks.process_price_range_csv',
-        'schedule': crontab(hour=4, minute=0, day_of_week=0),
+        'schedule': crontab(hour=5, minute=0, day_of_week=0),
         'args': (os.environ.get('ADMITAD_CSV_RANGE_8'), 'range_8'),
     },
 }

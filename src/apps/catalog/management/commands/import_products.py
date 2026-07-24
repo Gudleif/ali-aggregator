@@ -32,6 +32,67 @@ class Command(BaseCommand):
                     pass
         return data
 
+    CATEGORY_MAPPING = {
+        "Electronics & Tech": [
+            "3D Printing & Additive Manufacturing", "Access Building Automation", "Computer & Office Bundle",
+            "Computer Components", "Computer Peripherals", "Family Intelligence System"
+        ],
+        "Automotive & Motorcycles": [
+            "Automotive Sensors", "Car Lights", "Car Lock System", "Car Maintenance Tools",
+            "Car Repair Tool", "Car Seats & Accessories", "Car Wash & Maintenance",
+            "Chassis Parts", "Engines & Engine Parts", "Exterior Accessories", "Exterior Parts"
+        ],
+        "Kids, Toys & Babies": [
+            "Action & Toy Figures", "Arts & Crafts, DIY toys", "Baby Care", "Baby Diaper & Wipes",
+            "Baby Furniture", "Baby Souvenirs", "Baby Strollers&Accessories", "Baby Sterilization & Appliances",
+            "Building & Construction Toys", "Children's Sports", "Children's Watches", "Diapering & Toilet Training",
+            "Dolls & Accessories", "Electronic Toys", "Feeding", "Games and Puzzles"
+        ],
+        "Apparel & Fashion": [
+            "Apparel Fabrics & Textiles", "Basic Clothing", "Blazer & Suits", "Cosplay Costumes",
+            "Customized Blouses & Shirts", "Customized Dresses", "Customized Skirts", "Denim（New）",
+            "Down Coats", "Functional Apparel", "Faux Leather", "Fur & Faux Fur", "Genuine Leather"
+        ],
+        "Jewelry & Watches": [
+            "Couple Watches", "Customized Jewelry", "Customized Watches", "Fashion Jewelry", "Fine Jewelry"
+        ],
+        "Sports & Outdoors": [
+            "Activity & Gear", "Backpack", "Basketball（New）", "Boats", "Chest Bags",
+            "Cycling", "Dance", "Entertainment", "Fitness & Body Building", "Football（New）"
+        ],
+        "Tools & Home Improvement": [
+            "Abrasive Tools & Abrasives", "Air Compressors, Pneumatics & Hydraulics",
+            "Blowers, Industrial Fans & Exhaust Equipment", "Building Supplies",
+            "Drill Bits, Saw Blades & Cutting Tools", "Electrical Equipment", "Electrical Equipment & Supplies",
+            "Emergency Safety Supplies"
+        ],
+        "Home & Garden": [
+            "Bath & Shower", "Bathroom Fixture", "Café Furniture", "Arts,Crafts & Sewing"
+        ],
+        "Beauty & Health": [
+            "Beauty Equipment", "Beauty Supply", "Dental Supplies", "Fragrances & Deodorants"
+        ],
+        "Industrial & Business": [
+            "Accounting Supplies", "Agricultural Machinery & Supplies", "Aircraft", "Chemicals",
+            "Commercial Appliances", "Commercial Equipment", "Commercial Lighting",
+            "Construction Machinery & Accessories", "Food Machine and Supporting Equipment"
+        ],
+        "Other / Misc": [
+            "ACG Goods", "Additional Pay on Your Order", "Belt Buckle", "Books", "Collar Stays",
+            "Cultural Derivatives(Office Supplies)", "Custom-made-Charge", "DIY Accessories",
+            "Electronic Cigarettes", "Fabric & Textile Raw Material", "Filing Products",
+            "Fashionable Canes", "Functional Material", "Giftcard"
+        ]
+    }
+
+    def get_parent_category_name(self, sub_name):
+        """Ищет главную категорию по словарю маппинга"""
+        for parent, subcategories in self.CATEGORY_MAPPING.items():
+            if sub_name in subcategories:
+                return parent
+        return "Other / Misc"
+
+
     def handle(self, *args, **options):
         file_path = options['csv_file']
         self.stdout.write(f"Начинаем импорт из: {file_path}...")
@@ -88,15 +149,33 @@ class Command(BaseCommand):
                         if shop_density_tracker[shop_id] > 5:
                             internal_score = 0.0
 
-                    # 4. Определение категории
+                    # 4. Умное определение категории (с иерархией)
                     cat_slug = slugify(category_name)
                     if not cat_slug:
                         cat_slug = f"category-{abs(hash(category_name))}"
 
-                    category, _ = Category.objects.get_or_create(
-                        slug=cat_slug,
-                        defaults={'name': category_name}
-                    )
+                    # Пытаемся найти существующую категорию в БД (чтобы не затереть ручные правки)
+                    category = Category.objects.filter(slug=cat_slug).first()
+
+                    if not category:
+                        # Категория новая! Определяем для неё родителя по словарю
+                        parent_name = self.get_parent_category_name(category_name)
+                        parent_slug = slugify(parent_name)
+                        if not parent_slug:
+                            parent_slug = f"category-{abs(hash(parent_name))}"
+
+                        # Находим или создаем РОДИТЕЛЬСКУЮ категорию (она всегда без parent)
+                        parent_cat, _ = Category.objects.get_or_create(
+                            slug=parent_slug,
+                            defaults={'name': parent_name, 'parent': None}
+                        )
+
+                        # Создаем саму подкатегорию и жестко привязываем к родителю
+                        category = Category.objects.create(
+                            name=category_name,
+                            slug=cat_slug,
+                            parent=parent_cat
+                        )
 
                     # --- УМНАЯ ПРОВЕРКА БРЕНДА ---
                     brand = None

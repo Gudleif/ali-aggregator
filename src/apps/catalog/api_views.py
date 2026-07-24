@@ -8,6 +8,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from apps.catalog.models import Product, Category, Brand
 from apps.catalog.serializers import ProductSerializer, CategorySerializer, BrandSerializer
 from apps.catalog.filters import ProductFilter
+from .serializers import CategoryTreeSerializer
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
@@ -27,17 +28,18 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         filtered_queryset = self.filter_queryset(queryset)
-        sliced_queryset = filtered_queryset[:50]
+        sliced_queryset = filtered_queryset[:1000]
 
         serializer = self.get_serializer(sliced_queryset, many=True)
         return Response(serializer.data)
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
+    # Отдаем только главные категории (parent__isnull=True)
+    # и заранее подтягиваем дочерние (prefetch_related) для скорости
+    queryset = Category.objects.filter(parent__isnull=True).prefetch_related('subcategories')
+    serializer_class = CategoryTreeSerializer
 
-    # Кэшируем список категорий на 1 час
     @method_decorator(cache_page(60 * 60))
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
