@@ -57,4 +57,4 @@ class ProductListView(ListView):
 
     # Вытаскиваем только активные товары и оптимизируем SQL-запрос
     def get_queryset(self):
-        return Product.objects.filter(is_active=True).select_related('category', 'brand')
+        return Product.objects.filter(is_active=True).select_related('category', 'brand').order_by('-internal_score')

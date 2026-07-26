@@ -8,3 +8,5 @@ redis==5.0.4
 selenium==4.21.0
 requests==2.31.0
 django-redis==5.4.0
+pytest>=8.0.0
+pytest-django>=4.8.0

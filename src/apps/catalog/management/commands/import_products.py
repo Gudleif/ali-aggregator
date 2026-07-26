@@ -197,6 +197,9 @@ class Command(BaseCommand):
                     # Уникальный слаг на основе ID AliExpress (не зависит от бренда)
                     product_slug = f"item-{ali_id}"
 
+                    # Если рейтинг больше нуля — товар активен (True). Если 0.0 — скрыт (False).
+                    is_product_active = internal_score > 0.0
+
                     # 5. Ищем по УНИКАЛЬНОМУ СЛАГУ, чтобы не плодить дубликаты и не вызывать ошибок бд
                     product, created = Product.objects.update_or_create(
                         slug=product_slug,
@@ -212,6 +215,7 @@ class Command(BaseCommand):
                             'internal_score': internal_score,
                             'original_url': affiliate_url,
                             'image_url': image_url,
+                            'is_active': is_product_active,
                         }
                     )
 
