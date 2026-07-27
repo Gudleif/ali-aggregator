@@ -96,6 +96,25 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def display_score(self):
+        """
+        Преобразует внутренний скор (партнерскую выгоду) в красивый 5-балльный рейтинг для покупателей.
+        """
+        score = self.internal_score or 0
+        if score >= 30:
+            return "5.0"
+        elif score >= 20:
+            return "4.9"
+        elif score >= 5:
+            return "4.8"
+        else:
+            return "4.7"
+
+    @property
+    def redirect_url(self):
+        return f"/redirect/{self.id}/"
+
 
 class ClickLog(models.Model):
     product = models.ForeignKey(

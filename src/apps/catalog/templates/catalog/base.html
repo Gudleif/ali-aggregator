@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top-Ali — Best Tech & Hardware Deals from AliExpress</title>
+
+    <!-- Динамический Title с фоллбеком на главную страницу -->
+    <title>{% block title %}Best AliExpress Deals & Curated Products Online | Top Ali Aggregator{% endblock %}</title>
+
+    <!-- Динамический Description для сниппета в Google -->
+    <meta name="description" content="{% block description %}Discover top-rated AliExpress products with verified quality scores, exclusive discounts, and best prices online. Curated daily deals for tech, electronics, and lifestyle.{% endblock %}">
+
+    <!-- CANONICAL URL: Главный щит от дублей страниц -->
+    <link rel="canonical" href="{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
 
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,326 +28,62 @@
 
     <header class="navbar bg-white shadow-sm border-b border-slate-100 sticky top-0 z-[100]">
         <div class="container mx-auto px-4 flex justify-between items-center">
-            <!-- Клик по логотипу сбрасывает фильтры -->
-            <a href="#" onclick="resetFilters(); return false;" class="text-2xl font-black tracking-tight text-primary flex items-center gap-2 cursor-pointer">
+            <!-- Клик по логотипу сбрасывает фильтры (если JS активен) или возвращает на главную -->
+            <a href="/" onclick="if(typeof resetFilters === 'function') { resetFilters(); return false; }" class="text-2xl font-black tracking-tight text-primary flex items-center gap-2 cursor-pointer">
                 ⚡ <span class="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Top-Ali</span>
             </a>
             <div class="flex gap-4">
-                <span class="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Only verified stores with the best deals</span>
+                <span class="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent text-sm md:text-base font-medium">Only verified stores with the best deals</span>
             </div>
         </div>
     </header>
 
+    <!-- Главный контейнер, куда встраиваются дочерние шаблоны (витрина, страница товара и т.д.) -->
     <main class="flex-grow container mx-auto px-4 py-8">
-        <!-- Панель управления: Поиск и Категории -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8 relative z-50">
-            <div class="flex flex-col lg:flex-row gap-6 justify-between lg:items-center mb-6">
-                <h2 id="mainTitle" class="text-xl font-bold text-slate-800">Global Top 50 Deals</h2>
+        {% block content %}
+        {% endblock %}
+    </main>
 
-                <!-- Поиск DaisyUI -->
-                <div class="join w-full lg:w-96">
-                    <input type="text" id="searchInput" placeholder="A dream search"
-                           class="input input-bordered join-item w-full focus:outline-none" />
-                    <button onclick="triggerSearch()" class="btn btn-primary join-item">Search</button>
+    <!-- ИДЕАЛЬНЫЙ SEO-ФУТЕР (Deep Linking & E-E-A-T) -->
+    <footer class="bg-slate-900 text-slate-400 border-t border-slate-800 pt-12 pb-8">
+        <div class="container mx-auto px-4 space-y-8">
+
+            <!-- Блок 1: Глубокая перелинковка (Топ-10 популярных подкатегорий) -->
+            {% if top_subcategories %}
+            <div>
+                <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4">Popular Trending Niches (Deep Links)</h4>
+                <div class="flex flex-wrap gap-2.5">
+                    {% for subcat in top_subcategories %}
+                        <a href="/?category={{ subcat.slug }}" class="text-sm font-medium bg-slate-800/80 hover:bg-primary hover:text-white text-slate-200 px-4 py-2.5 rounded-xl transition-all border border-slate-700/50 shadow-sm">
+                            {{ subcat.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+            <hr class="border-slate-800" />
+            {% endif %}
+
+            <!-- Блок 2: Траст и E-E-A-T (Юридические страницы + Дисклеймер) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center text-xs text-slate-500">
+                <div class="space-y-2">
+                    <p class="font-bold text-slate-400 text-sm">⚡ Top-Ali Aggregator © 2026</p>
+                    <p class="leading-relaxed">
+                        <strong class="text-slate-400">Affiliate Disclosure:</strong> Top-Ali is a participant in the AliExpress Affiliate Program. We may earn an affiliate commission if you purchase products through links on our website at no additional cost to you. Product prices and availability are updated automatically.
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-6 md:justify-end font-medium">
+                    <a href="/privacy/" class="hover:text-slate-300 transition-colors">Privacy Policy</a>
+                    <a href="/terms/" class="hover:text-slate-300 transition-colors">Terms of Service</a>
+                    <a href="/disclosure/" class="hover:text-slate-300 transition-colors">Affiliate Disclosure</a>
+                    <a href="/contact/" class="hover:text-slate-300 transition-colors">Contact Us</a>
                 </div>
             </div>
 
-            <!-- Категории DaisyUI -->
-            <div class="flex flex-wrap gap-2" id="categoriesContainer">
-                <button onclick="filterByCategory('', '', '')" id="btn-all" class="btn btn-sm btn-primary text-white category-trigger">
-                    All Categories
-                </button>
-                <!-- Сюда JS подгрузит выпадающие списки (dropdowns) -->
-            </div>
         </div>
-
-        <!-- Инфо-панель перед товарами -->
-        <div class="flex items-center justify-between mb-4 px-1">
-            <span class="text-sm font-medium text-slate-500">Selected Deals</span>
-            <span id="productCounter" class="badge badge-ghost font-medium">Loading...</span>
-        </div>
-
-        <!-- Сетка товаров -->
-        <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 relative z-0">
-            <!-- Карточки товаров генерируются через JS -->
-        </div>
-
-        <!-- Контейнер для пагинации -->
-        <div id="paginationContainer" class="flex justify-center items-center gap-1.5 mt-12 mb-6 flex-wrap">
-            <!-- Кнопки страниц генерируются через JS -->
-        </div>
-    </main>
-
-    <footer class="footer footer-center p-6 bg-slate-900 text-slate-400 border-t border-slate-800">
-        <aside>
-            <p class="font-bold text-slate-300">⚡ Top-Ali Aggregator © 2026</p>
-            <p>All rights reserved. Prices update automatically.</p>
-        </aside>
     </footer>
 
-    <!-- Логика работы с API и Пагинацией -->
-    <script>
-        const API_BASE = 'http://127.0.0.1:8000/api/v1/catalog';
-        let currentCategory = '';
-        let currentSearch = '';
-
-        // --- Настройки лимитов и пагинации ---
-        let currentPage = 1;
-        const ITEMS_PER_PAGE = 50;
-        const MAX_PAGES = 20;
-        const MAX_ITEMS = 1000;
-
-        document.addEventListener("DOMContentLoaded", () => {
-            loadCategories();
-            loadProducts();
-
-            // Поиск по нажатию Enter
-            document.getElementById('searchInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') triggerSearch();
-            });
-        });
-
-        async function loadCategories() {
-            try {
-                const response = await fetch(`${API_BASE}/categories/`);
-                const categoriesTree = await response.json();
-                const container = document.getElementById('categoriesContainer');
-
-                container.innerHTML = `
-                    <button onclick="filterByCategory('', '', '')" id="btn-all" class="btn btn-sm btn-primary text-white category-trigger">
-                        All Categories
-                    </button>
-                `;
-
-                categoriesTree.forEach(parent => {
-                    if (parent.subcategories && parent.subcategories.length > 0) {
-                        const dropdown = document.createElement('div');
-                        dropdown.className = "dropdown dropdown-hover";
-
-                        let subItems = `<li><a onclick="filterByCategory('${parent.slug}', 'All from ${parent.name}', '${parent.slug}')" class="font-bold text-primary">All from ${parent.name}</a></li>`;
-
-                        parent.subcategories.forEach(sub => {
-                            subItems += `<li><a onclick="filterByCategory('${sub.slug}', '${sub.name}', '${parent.slug}')">${sub.name}</a></li>`;
-                        });
-
-                        dropdown.innerHTML = `
-                            <div tabindex="0" role="button" id="btn-${parent.slug}" onclick="filterByCategory('${parent.slug}', 'All from ${parent.name}', '${parent.slug}')" class="btn btn-sm btn-outline btn-primary hover:text-white category-trigger flex items-center gap-1">
-                                ${parent.name}
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                            </div>
-                            <ul tabindex="0" class="dropdown-content menu p-2 shadow-xl bg-white border border-slate-100 rounded-box w-64 text-sm text-slate-700 mt-0 pt-2 max-h-96 flex-nowrap overflow-y-auto z-[60]">
-                                ${subItems}
-                            </ul>
-                        `;
-                        container.appendChild(dropdown);
-                    } else {
-                        const btn = document.createElement('button');
-                        btn.id = `btn-${parent.slug}`;
-                        btn.className = "btn btn-sm btn-outline btn-primary hover:text-white category-trigger";
-                        btn.innerText = parent.name;
-                        btn.onclick = () => filterByCategory(parent.slug, parent.name, parent.slug);
-                        container.appendChild(btn);
-                    }
-                });
-            } catch (error) {
-                console.error("Failed to load categories:", error);
-            }
-        }
-
-        async function loadProducts() {
-            const grid = document.getElementById('productsGrid');
-            const counter = document.getElementById('productCounter');
-            const pagination = document.getElementById('paginationContainer');
-
-            grid.innerHTML = '<div class="col-span-full flex justify-center py-16"><span class="loading loading-spinner loading-lg text-primary"></span></div>';
-            pagination.innerHTML = '';
-
-            let url = `${API_BASE}/products/?page=${currentPage}&page_size=${ITEMS_PER_PAGE}&`;
-            if (currentCategory) url += `category=${currentCategory}&`;
-            if (currentSearch) url += `search=${encodeURIComponent(currentSearch)}&`;
-
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-
-                grid.innerHTML = '';
-
-                let products = [];
-                let totalCount = 0;
-
-                // Поддержка как пагинированного ответа DRF ({count, results}), так и обычного массива
-                if (Array.isArray(data)) {
-                    totalCount = Math.min(data.length, MAX_ITEMS);
-                    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-                    products = data.slice(start, start + ITEMS_PER_PAGE);
-                } else {
-                    totalCount = Math.min(data.count || 0, MAX_ITEMS);
-                    products = data.results || [];
-                }
-
-                const totalPages = Math.min(Math.ceil(totalCount / ITEMS_PER_PAGE), MAX_PAGES);
-
-                counter.innerText = `Found: ${totalCount} deals ${totalPages > 1 ? `(Page ${currentPage} of ${totalPages})` : ''}`;
-
-                if (products.length === 0) {
-                    grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-500 font-medium">Nothing found. Please try a different query.</div>';
-                    return;
-                }
-
-                products.forEach(product => {
-                    let discountBadge = '';
-                    if (product.old_price && parseFloat(product.old_price) > parseFloat(product.price)) {
-                        const pct = Math.round(((product.old_price - product.price) / product.old_price) * 100);
-                        if (pct > 0) {
-                            discountBadge = `<div class="badge badge-error text-white font-bold absolute top-3 left-3 shadow-sm border-none">-${pct}%</div>`;
-                        }
-                    }
-
-                    const card = document.createElement('div');
-                    card.className = "card bg-white shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 overflow-hidden group";
-
-                    card.innerHTML = `
-                        <figure class="relative pt-[100%] bg-slate-50 overflow-hidden">
-                            <img src="${product.image_url}" alt="${product.name}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                            ${discountBadge}
-                            <div class="badge badge-success text-white font-bold absolute top-3 right-3 shadow-sm text-xs border-none bg-emerald-500">
-                                ★ ${parseFloat(product.internal_score).toFixed(1)}
-                            </div>
-                        </figure>
-                        <div class="card-body p-4 gap-2">
-                            <div class="text-[10px] font-bold text-primary uppercase tracking-wider">
-                                ${product.brand?.name || 'AliExpress'}
-                            </div>
-                            <h3 class="card-title text-sm font-medium text-slate-700 leading-snug line-clamp-2 min-h-[2.5rem]" title="${product.name}">
-                                ${product.name}
-                            </h3>
-                            <div class="flex items-baseline gap-2 mt-2">
-                                <span class="text-lg font-black text-slate-900">$${product.price}</span>
-                                ${product.old_price ? `<span class="text-xs text-slate-400 line-through font-medium">$${product.old_price}</span>` : ''}
-                            </div>
-                            <div class="card-actions mt-3 w-full">
-                                <a href="${product.redirect_url}" target="_blank" class="btn btn-primary btn-block btn-sm text-white shadow-sm">
-                                    View Deal
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
-
-                // Отрисовка пагинации
-                renderPagination(totalPages);
-
-            } catch (error) {
-                grid.innerHTML = '<div class="col-span-full text-center py-12 text-error font-medium">API server connection error.</div>';
-                counter.innerText = 'Error';
-            }
-        }
-
-        // --- Генерация классической пагинации ---
-        function renderPagination(totalPages) {
-            const container = document.getElementById('paginationContainer');
-            container.innerHTML = '';
-
-            if (totalPages <= 1) return;
-
-            const createBtn = (text, page, isActive = false, isDisabled = false) => {
-                const btn = document.createElement('button');
-                btn.className = `btn btn-sm ${isActive ? 'btn-primary text-white' : 'btn-outline btn-primary hover:text-white'} ${isDisabled ? 'btn-disabled opacity-40 cursor-not-allowed' : ''}`;
-                btn.innerHTML = text;
-                if (!isDisabled && !isActive) {
-                    btn.onclick = () => {
-                        currentPage = page;
-                        loadProducts();
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    };
-                }
-                return btn;
-            };
-
-            // Кнопка "В начало" (<< First)
-            container.appendChild(createBtn('« First', 1, false, currentPage === 1));
-
-            // Кнопка "Назад" (< Prev)
-            container.appendChild(createBtn('‹ Prev', currentPage - 1, false, currentPage === 1));
-
-            // Расчет диапазона отображаемых страниц
-            let startPage = Math.max(1, currentPage - 2);
-            let endPage = Math.min(totalPages, currentPage + 2);
-
-            if (currentPage <= 3) endPage = Math.min(5, totalPages);
-            if (currentPage >= totalPages - 2) startPage = Math.max(1, totalPages - 4);
-
-            if (startPage > 1) {
-                container.appendChild(createBtn('1', 1, currentPage === 1));
-                if (startPage > 2) {
-                    const dots = document.createElement('span');
-                    dots.className = 'px-1 text-slate-400 font-bold select-none';
-                    dots.innerText = '...';
-                    container.appendChild(dots);
-                }
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                container.appendChild(createBtn(i, i, currentPage === i));
-            }
-
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) {
-                    const dots = document.createElement('span');
-                    dots.className = 'px-1 text-slate-400 font-bold select-none';
-                    dots.innerText = '...';
-                    container.appendChild(dots);
-                }
-                container.appendChild(createBtn(totalPages, totalPages, currentPage === totalPages));
-            }
-
-            // Кнопка "Вперед" (Next >)
-            container.appendChild(createBtn('Next ›', currentPage + 1, false, currentPage === totalPages));
-
-            // Кнопка "В конец" (Last >>)
-            container.appendChild(createBtn('Last »', totalPages, false, currentPage === totalPages));
-        }
-
-        function filterByCategory(slug, name = '', parentSlug = '') {
-            currentCategory = slug;
-            currentPage = 1; // Сброс на первую страницу при смене категории
-
-            currentSearch = '';
-            document.getElementById('searchInput').value = '';
-
-            const title = document.getElementById('mainTitle');
-            title.innerText = name ? `Top Deals: ${name}` : `Global Top 50 Deals`;
-
-            const buttons = document.querySelectorAll('.category-trigger');
-            buttons.forEach(btn => {
-                btn.classList.remove('btn-primary', 'text-white');
-                btn.classList.add('btn-outline', 'btn-primary', 'hover:text-white');
-            });
-
-            const activeBtnId = parentSlug ? `btn-${parentSlug}` : (slug ? `btn-${slug}` : 'btn-all');
-            const activeBtn = document.getElementById(activeBtnId);
-            if (activeBtn) {
-                activeBtn.classList.remove('btn-outline', 'hover:text-white');
-                activeBtn.classList.add('btn-primary', 'text-white');
-            }
-
-            document.activeElement.blur();
-            loadProducts();
-        }
-
-        function triggerSearch() {
-            currentSearch = document.getElementById('searchInput').value.trim();
-            currentPage = 1; // Сброс на первую страницу при новом поиске
-            loadProducts();
-        }
-
-        function resetFilters() {
-            document.getElementById('searchInput').value = '';
-            currentSearch = '';
-            currentPage = 1;
-            filterByCategory('', '', '');
-        }
-    </script>
+    <!-- Блок для подключения скриптов дочерних страниц -->
+    {% block extra_js %}
+    {% endblock %}
 </body>
 </html>

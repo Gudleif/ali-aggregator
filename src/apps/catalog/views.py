@@ -1,7 +1,8 @@
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import ListView
-from .models import Product, ClickLog
+from .models import Product, Category, ClickLog
 
 
 class ProductRedirectView(View):
@@ -32,29 +33,82 @@ class ProductRedirectView(View):
         elif product.original_url:
             target_url = product.original_url
         else:
-            # Предохранитель: если обе ссылки пустые, возвращаем юзера на витрину
             return redirect('/')
-
-        # === ДЕБАГ В ТЕРМИНАЛ ===
-        # Этот блок выведет информацию прямо в твою консоль Docker
-        print("\n" + "="*50)
-        print("=== ДЕБАГ ПАРТНЕРСКОГО РЕДИРЕКТА ===")
-        print(f"1. Товар: {product.name} (ID: {product.id})")
-        print(f"2. Наличие Affiliate URL: {bool(product.affiliate_url)}")
-        print(f"3. Наличие Original URL: {bool(product.original_url)}")
-        print(f"4. ИТОГОВЫЙ ПЕРЕХОД: {target_url}")
-        print("="*50 + "\n")
-        # =======================
 
         return redirect(target_url)
 
 
-# Класс для витрины
+# Класс для гибридной витрины с серверной пагинацией и фильтрацией
 class ProductListView(ListView):
     model = Product
     template_name = 'catalog/product_list.html'
     context_object_name = 'products'
+    paginate_by = 30  # Количество товаров на одной странице
 
-    # Вытаскиваем только активные товары и оптимизируем SQL-запрос
     def get_queryset(self):
-        return Product.objects.filter(is_active=True).select_related('category', 'brand').order_by('-internal_score')
+        queryset = Product.objects.filter(is_active=True).select_related('category', 'brand').order_by(
+            '-internal_score')
+
+        category_slug = self.request.GET.get('category')
+        if category_slug:
+            # Ищем саму категорию
+            category = Category.objects.filter(slug=category_slug).first()
+            if category:
+                # Находим все ID самой категории и всех её подкатегорий
+                subcategories_ids = category.subcategories.values_list('id', flat=True)
+                all_category_ids = [category.id] + list(subcategories_ids)
+
+                # Фильтруем товары по всему списку ID (родитель + подкатегории)
+                queryset = queryset.filter(category__id__in=all_category_ids)
+
+        search_query = self.request.GET.get('search')
+        if search_query:
+            queryset = queryset.filter(name__icontains=search_query)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category_slug = self.request.GET.get('category', '')
+        context['current_category'] = category_slug
+        context['current_search'] = self.request.GET.get('search', '')
+
+        # --- 1. ОБЪЕКТ ТЕКУЩЕЙ КАТЕГОРИИ И ПОХОЖИЕ РАЗДЕЛЫ ---
+        current_cat_obj = None
+        related_categories = []
+        if category_slug:
+            current_cat_obj = Category.objects.filter(slug=category_slug).select_related('parent').first()
+            if current_cat_obj:
+                if current_cat_obj.parent:
+                    # Если подкатегория -> берем сестер у того же родителя
+                    related_categories = Category.objects.filter(
+                        parent=current_cat_obj.parent
+                    ).exclude(id=current_cat_obj.id)[:6]
+                else:
+                    # Если родитель -> берем его подкатегории
+                    related_categories = current_cat_obj.subcategories.all()[:6]
+
+        context['current_category_obj'] = current_cat_obj
+        context['related_categories'] = related_categories
+
+        # --- 2. ТОП-10 ПОДКАТЕГОРИЙ ДЛЯ ФУТЕРА (DEEP LINKING) ---
+        context['top_subcategories'] = Category.objects.filter(
+            parent__isnull=False
+        ).annotate(
+            active_products_count=Count('products', filter=Q(products__is_active=True))
+        ).order_by('-active_products_count')[:10]
+
+        # --- 3. СЧЕТЧИКИ ПАГИНАТОРА ---
+        paginator = context.get('paginator')
+        if paginator:
+            total_count = paginator.count
+            total_pages = paginator.num_pages
+
+            # Логика ограничений для UX и SEO (1000+ товаров и 50+ страниц)
+            context['display_count'] = "1000+" if total_count > 1000 else str(total_count)
+            context['display_pages'] = "50+" if total_pages > 50 else str(total_pages)
+        else:
+            context['display_count'] = "0"
+            context['display_pages'] = "1"
+
+        return context

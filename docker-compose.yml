@@ -54,14 +54,5 @@ services:
       - redis
     restart: always
 
-  selenium:
-    image: selenium/standalone-chrome:latest
-    container_name: pc_selenium
-    ports:
-      - "4444:4444"
-      - "7900:7900"
-    shm_size: 2gb
-    restart: always
-
 volumes:
   postgres_data:

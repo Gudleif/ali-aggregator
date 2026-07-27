@@ -43,6 +43,9 @@ class ProductSerializer(serializers.ModelSerializer):
     # Так никто не сможет обойти нашу систему учета кликов!
     redirect_url = serializers.SerializerMethodField()
 
+    # Явно добавляем вычисляемое поле в JSON-ответ
+    display_score = serializers.ReadOnlyField()
+
     class Meta:
         model = Product
         fields = [
@@ -53,7 +56,8 @@ class ProductSerializer(serializers.ModelSerializer):
             'image_url',
             'category',
             'brand',
-            'redirect_url'
+            'redirect_url',
+            'display_score'
         ]
 
     def get_redirect_url(self, obj):

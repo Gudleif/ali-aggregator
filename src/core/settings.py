@@ -39,8 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'django_filters',
-    # Твое новое приложение:
     'apps.catalog',
+    'django.contrib.sitemaps',
 ]
 
 MIDDLEWARE = [

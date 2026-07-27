@@ -2,6 +2,7 @@ from django.contrib import admin
 from .models import Category, Brand, Product
 from .models import ClickLog
 
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug', 'parent')
@@ -33,6 +34,9 @@ class ProductAdmin(admin.ModelAdmin):
     # Поля только для чтения
     readonly_fields = ('created_at', 'updated_at')
 
+    # Оптимизация запросов к БД в списочном виде
+    list_select_related = ('category', 'brand')
+
     # Группируем поля на странице редактирования товара для красоты
     fieldsets = (
         ('General Info', {
@@ -51,8 +55,17 @@ class ProductAdmin(admin.ModelAdmin):
 @admin.register(ClickLog)
 class ClickLogAdmin(admin.ModelAdmin):
     list_display = ('product', 'timestamp', 'ip_address', 'user_agent_short')
-    list_filter = ('timestamp', 'product')
+
+    # УБРАЛИ 'product' из list_filter, чтобы админка не выгружала все товары в память
+    list_filter = ('timestamp',)
+
     search_fields = ('product__name', 'ip_address', 'user_agent')
+
+    # Оптимизации производительности и памяти для логов
+    list_select_related = ('product',)
+    raw_id_fields = ('product',)
+    show_full_result_count = False
+    list_per_page = 50
 
     # Делаем всю панель логов доступной только для чтения
     def has_add_permission(self, request):
