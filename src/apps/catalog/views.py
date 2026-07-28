@@ -65,6 +65,10 @@ class ProductListView(ListView):
         if search_query:
             queryset = queryset.filter(name__icontains=search_query)
 
+        # --- ЖЕСТКОЕ ОГРАНИЧЕНИЕ ПАГИНАЦИИ (Максимум 50 страниц / 1500 товаров) ---
+        max_items = self.paginate_by * 50
+        queryset = queryset[:max_items]
+
         return queryset
 
     def get_context_data(self, **kwargs):

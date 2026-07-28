@@ -4,6 +4,7 @@ from django.contrib.sitemaps.views import sitemap
 from django.http import HttpResponse
 from apps.catalog.views import ProductRedirectView, ProductListView
 from apps.catalog.sitemaps import StorefrontSitemap
+from django.views.generic import TemplateView
 
 # Регистрируем только реальную карту витрины
 sitemaps = {
@@ -34,4 +35,9 @@ urlpatterns = [
     # 2. ВИТРИНА И РЕДИРЕКТЫ
     path('', ProductListView.as_view(), name='product_list'),
     path('redirect/<int:product_id>/', ProductRedirectView.as_view(), name='product_buy'),
+
+    path('privacy-policy/', TemplateView.as_view(template_name='catalog/privacy.html'), name='privacy'),
+    path('terms-of-service/', TemplateView.as_view(template_name='catalog/terms.html'), name='terms'),
+    path('affiliate-disclosure/', TemplateView.as_view(template_name='catalog/affiliate.html'), name='affiliate'),
+    path('contact-us/', TemplateView.as_view(template_name='catalog/contact.html'), name='contact'),
 ]
