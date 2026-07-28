@@ -54,11 +54,32 @@
             </div>
         </form>
 
+        <!-- Чистый SSR: Динамические категории рендерятся прямо на сервере -->
         <div class="flex flex-wrap gap-2" id="categoriesContainer">
             <a href="/" class="btn btn-sm {% if not current_category %}btn-primary text-white{% else %}btn-outline btn-primary hover:text-white{% endif %}">
                 All Categories
             </a>
-            <!-- Динамические категории рендерятся через JS -->
+
+            {% for parent in categories %}
+                {% if parent.subcategories.all %}
+                    <div class="dropdown dropdown-hover">
+                        <a href="/?category={{ parent.slug }}" class="btn btn-sm {% if current_category == parent.slug %}btn-primary text-white{% else %}btn-outline btn-primary hover:text-white{% endif %} flex items-center gap-1">
+                            {{ parent.name }}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </a>
+                        <ul tabindex="0" class="dropdown-content menu p-2 shadow-xl bg-white border border-slate-100 rounded-box w-64 text-sm text-slate-700 mt-0 pt-2 max-h-96 flex-nowrap overflow-y-auto z-[60]">
+                            <li><a href="/?category={{ parent.slug }}" class="font-bold text-primary">All from {{ parent.name }}</a></li>
+                            {% for sub in parent.subcategories.all %}
+                                <li><a href="/?category={{ sub.slug }}">{{ sub.name }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% else %}
+                    <a href="/?category={{ parent.slug }}" class="btn btn-sm {% if current_category == parent.slug %}btn-primary text-white{% else %}btn-outline btn-primary hover:text-white{% endif %}">
+                        {{ parent.name }}
+                    </a>
+                {% endif %}
+            {% endfor %}
         </div>
     </div>
 
@@ -227,58 +248,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    const API_BASE = 'http://127.0.0.1:8000/api/v1/catalog';
-
-    document.addEventListener("DOMContentLoaded", () => {
-        loadCategories();
-    });
-
-    async function loadCategories() {
-        try {
-            const response = await fetch(`${API_BASE}/categories/`);
-            const categoriesTree = await response.json();
-            const container = document.getElementById('categoriesContainer');
-            const urlParams = new URLSearchParams(window.location.search);
-            const currentCat = urlParams.get('category') || '';
-
-            container.innerHTML = `
-                <a href="/" class="btn btn-sm ${!currentCat ? 'btn-primary text-white' : 'btn-outline btn-primary hover:text-white'}">
-                    All Categories
-                </a>
-            `;
-
-            categoriesTree.forEach(parent => {
-                if (parent.subcategories && parent.subcategories.length > 0) {
-                    const dropdown = document.createElement('div');
-                    dropdown.className = "dropdown dropdown-hover";
-
-                    let subItems = `<li><a href="/?category=${parent.slug}" class="font-bold text-primary">All from ${parent.name}</a></li>`;
-                    parent.subcategories.forEach(sub => {
-                        subItems += `<li><a href="/?category=${sub.slug}">${sub.name}</a></li>`;
-                    });
-
-                    dropdown.innerHTML = `
-                        <a href="/?category=${parent.slug}" class="btn btn-sm ${currentCat === parent.slug ? 'btn-primary text-white' : 'btn-outline btn-primary hover:text-white'} flex items-center gap-1">
-                            ${parent.name}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                        </a>
-                        <ul tabindex="0" class="dropdown-content menu p-2 shadow-xl bg-white border border-slate-100 rounded-box w-64 text-sm text-slate-700 mt-0 pt-2 max-h-96 flex-nowrap overflow-y-auto z-[60]">
-                            ${subItems}
-                        </ul>
-                    `;
-                    container.appendChild(dropdown);
-                } else {
-                    const btn = document.createElement('a');
-                    btn.href = `/?category=${parent.slug}`;
-                    btn.className = `btn btn-sm ${currentCat === parent.slug ? 'btn-primary text-white' : 'btn-outline btn-primary hover:text-white'}`;
-                    btn.innerText = parent.name;
-                    container.appendChild(btn);
-                }
-            });
-        } catch (error) {
-            console.error("Failed to load categories:", error);
-        }
-    }
-</script>
+<!-- JavaScript для загрузки категорий удален. Рендеринг полностью серверный (SEO-friendly). -->
 {% endblock %}

@@ -77,6 +77,18 @@ class ProductListView(ListView):
         context['current_category'] = category_slug
         context['current_search'] = self.request.GET.get('search', '')
 
+        # --- ДОБАВЛЯЕМ КОРНЕВЫЕ КАТЕГОРИИ ДЛЯ ГЛАВНОГО МЕНЮ ---
+        # ИСПРАВЛЕНО: считаем товары из subcategories__products, так как товары лежат на уровень глубже
+        context['categories'] = Category.objects.filter(
+            parent__isnull=True
+        ).annotate(
+            active_products_count=Count(
+                'subcategories__products',
+                filter=Q(subcategories__products__is_active=True),
+                distinct=True
+            )
+        ).order_by('name')
+
         # --- 1. ОБЪЕКТ ТЕКУЩЕЙ КАТЕГОРИИ И ПОХОЖИЕ РАЗДЕЛЫ ---
         current_cat_obj = None
         related_categories = []
@@ -96,6 +108,7 @@ class ProductListView(ListView):
         context['related_categories'] = related_categories
 
         # --- 2. ТОП-10 ПОДКАТЕГОРИЙ ДЛЯ ФУТЕРА (DEEP LINKING) ---
+        # Здесь всё было правильно, так как товары привязаны к подкатегориям напрямую
         context['top_subcategories'] = Category.objects.filter(
             parent__isnull=False
         ).annotate(
