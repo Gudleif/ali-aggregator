@@ -63,10 +63,11 @@
             {% for parent in categories %}
                 {% if parent.subcategories.all %}
                     <div class="dropdown dropdown-hover">
-                        <a href="/?category={{ parent.slug }}" class="btn btn-sm {% if current_category == parent.slug %}btn-primary text-white{% else %}btn-outline btn-primary hover:text-white{% endif %} flex items-center gap-1">
+                        <!-- Заменили <a> на <div role="button" tabindex="0">, чтобы на смартфонах клик открывал меню, а не переходил по ссылке -->
+                        <div tabindex="0" role="button" class="btn btn-sm {% if current_category == parent.slug %}btn-primary text-white{% else %}btn-outline btn-primary hover:text-white{% endif %} flex items-center gap-1">
                             {{ parent.name }}
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                        </a>
+                        </div>
                         <ul tabindex="0" class="dropdown-content menu p-2 shadow-xl bg-white border border-slate-100 rounded-box w-64 text-sm text-slate-700 mt-0 pt-2 max-h-96 flex-nowrap overflow-y-auto z-[60]">
                             <li><a href="/?category={{ parent.slug }}" class="font-bold text-primary">All from {{ parent.name }}</a></li>
                             {% for sub in parent.subcategories.all %}
@@ -75,6 +76,7 @@
                         </ul>
                     </div>
                 {% else %}
+                    <!-- Если подкатегорий нет, оставляем обычной ссылкой -->
                     <a href="/?category={{ parent.slug }}" class="btn btn-sm {% if current_category == parent.slug %}btn-primary text-white{% else %}btn-outline btn-primary hover:text-white{% endif %}">
                         {{ parent.name }}
                     </a>
