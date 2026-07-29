@@ -26,3 +26,5 @@ static/
 # Тяжелые данные для импорта
 *.csv
 src/goods.csv
+
+celerybeat-schedule
