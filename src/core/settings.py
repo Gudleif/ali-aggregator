@@ -131,6 +131,13 @@ CELERY_RESULT_SERIALIZER = 'json'
 # Устанавливаем часовой пояс для планировщика такой же, как в Django
 CELERY_TIMEZONE = TIME_ZONE
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://top-ali.store',
+    'https://www.top-ali.store',
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Расписание запуска задач (Celery Beat)
 CELERY_BEAT_SCHEDULE = {
     'import_range_1': {
