@@ -145,42 +145,42 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CELERY_BEAT_SCHEDULE = {
     'import_range_1': {
         'task': 'apps.catalog.tasks.process_price_range_csv',
-        'schedule': crontab(hour=2, minute=0, day_of_week=1),
+        'schedule': crontab(hour=8, minute=0, day_of_week=1),
         'args': (os.environ.get('ADMITAD_CSV_RANGE_1'), 'range_1'),
     },
     'import_range_2': {
         'task': 'apps.catalog.tasks.process_price_range_csv',
-        'schedule': crontab(hour=2, minute=0, day_of_week=2),
+        'schedule': crontab(hour=8, minute=0, day_of_week=2),
         'args': (os.environ.get('ADMITAD_CSV_RANGE_2'), 'range_2'),
     },
     'import_range_3': {
         'task': 'apps.catalog.tasks.process_price_range_csv',
-        'schedule': crontab(hour=2, minute=0, day_of_week=3),
+        'schedule': crontab(hour=8, minute=0, day_of_week=3),
         'args': (os.environ.get('ADMITAD_CSV_RANGE_3'), 'range_3'),
     },
     'import_range_4': {
         'task': 'apps.catalog.tasks.process_price_range_csv',
-        'schedule': crontab(hour=2, minute=0, day_of_week=4),
+        'schedule': crontab(hour=8, minute=0, day_of_week=4),
         'args': (os.environ.get('ADMITAD_CSV_RANGE_4'), 'range_4'),
     },
     'import_range_5': {
         'task': 'apps.catalog.tasks.process_price_range_csv',
-        'schedule': crontab(hour=2, minute=0, day_of_week=5),
+        'schedule': crontab(hour=8, minute=0, day_of_week=5),
         'args': (os.environ.get('ADMITAD_CSV_RANGE_5'), 'range_5'),
     },
     'import_range_6': {
         'task': 'apps.catalog.tasks.process_price_range_csv',
-        'schedule': crontab(hour=2, minute=0, day_of_week=6),
+        'schedule': crontab(hour=8, minute=0, day_of_week=6),
         'args': (os.environ.get('ADMITAD_CSV_RANGE_6'), 'range_6'),
     },
     'import_range_7': {
         'task': 'apps.catalog.tasks.process_price_range_csv',
-        'schedule': crontab(hour=1, minute=0, day_of_week=0),
+        'schedule': crontab(hour=7, minute=0, day_of_week=0),
         'args': (os.environ.get('ADMITAD_CSV_RANGE_7'), 'range_7'),
     },
     'import_range_8': {
         'task': 'apps.catalog.tasks.process_price_range_csv',
-        'schedule': crontab(hour=5, minute=0, day_of_week=0),
+        'schedule': crontab(hour=10, minute=0, day_of_week=0),
         'args': (os.environ.get('ADMITAD_CSV_RANGE_8'), 'range_8'),
     },
 }
