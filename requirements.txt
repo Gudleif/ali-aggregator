@@ -10,3 +10,4 @@ django-redis==5.4.0
 pytest>=8.0.0
 pytest-django>=4.8.0
 whitenoise>=6.0.0
+gunicorn
