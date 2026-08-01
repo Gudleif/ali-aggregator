@@ -1,6 +1,27 @@
 from django.contrib import admin
+from django.core.paginator import Paginator
+from django.db import connection
 from .models import Category, Brand, Product
 from .models import ClickLog
+
+
+class LargeTablePaginator(Paginator):
+    """
+    Пагинатор для таблиц с миллионами строк, использующий статистику Postgres.
+    Позволяет избежать тяжелого SELECT COUNT(*) при загрузке списка админки.
+    """
+
+    def _get_count(self):
+        if not self.object_list.query.where:  # Работает, если список не отфильтрован
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT reltuples::bigint FROM pg_class WHERE relname = %s",
+                    [self.object_list.model._meta.db_table]
+                )
+                return int(cursor.fetchone()[0])
+        return super().count
+
+    count = property(_get_count)
 
 
 @admin.register(Category)
@@ -36,6 +57,10 @@ class ProductAdmin(admin.ModelAdmin):
 
     # Оптимизация запросов к БД в списочном виде
     list_select_related = ('category', 'brand')
+
+    # --- НОВЫЕ ПАРАМЕТРЫ ОПТИМИЗАЦИИ ---
+    show_full_result_count = False  # Отключает честный COUNT(*) по всей базе при фильтрации
+    paginator = LargeTablePaginator  # Мгновенная пагинация через статистику Postgres
 
     # Группируем поля на странице редактирования товара для красоты
     fieldsets = (
