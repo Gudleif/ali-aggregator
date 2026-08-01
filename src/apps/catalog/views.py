@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
@@ -77,17 +78,24 @@ class ProductListView(ListView):
         context['current_category'] = category_slug
         context['current_search'] = self.request.GET.get('search', '')
 
-        # --- ДОБАВЛЯЕМ КОРНЕВЫЕ КАТЕГОРИИ ДЛЯ ГЛАВНОГО МЕНЮ ---
-        # ИСПРАВЛЕНО: считаем товары из subcategories__products, так как товары лежат на уровень глубже
-        context['categories'] = Category.objects.filter(
-            parent__isnull=True
-        ).annotate(
-            active_products_count=Count(
-                'subcategories__products',
-                filter=Q(subcategories__products__is_active=True),
-                distinct=True
+        # --- ДОБАВЛЯЕМ КОРНЕВЫЕ КАТЕГОРИИ ДЛЯ ГЛАВНОГО МЕНЮ (С КЭШИРОВАНИЕМ) ---
+        categories = cache.get('main_menu_categories')
+        if not categories:
+            categories = list(
+                Category.objects.filter(
+                    parent__isnull=True
+                ).annotate(
+                    active_products_count=Count(
+                        'subcategories__products',
+                        filter=Q(subcategories__products__is_active=True),
+                        distinct=True
+                    )
+                ).order_by('name')
             )
-        ).order_by('name')
+            # Сохраняем в кэш на 6 часов (21600 секунд)
+            cache.set('main_menu_categories', categories, 21600)
+
+        context['categories'] = categories
 
         # --- 1. ОБЪЕКТ ТЕКУЩЕЙ КАТЕГОРИИ И ПОХОЖИЕ РАЗДЕЛЫ ---
         current_cat_obj = None
@@ -107,13 +115,20 @@ class ProductListView(ListView):
         context['current_category_obj'] = current_cat_obj
         context['related_categories'] = related_categories
 
-        # --- 2. ТОП-10 ПОДКАТЕГОРИЙ ДЛЯ ФУТЕРА (DEEP LINKING) ---
-        # Здесь всё было правильно, так как товары привязаны к подкатегориям напрямую
-        context['top_subcategories'] = Category.objects.filter(
-            parent__isnull=False
-        ).annotate(
-            active_products_count=Count('products', filter=Q(products__is_active=True))
-        ).order_by('-active_products_count')[:10]
+        # --- 2. ТОП-10 ПОДКАТЕГОРИЙ ДЛЯ ФУТЕРА (DEEP LINKING С КЭШИРОВАНИЕМ) ---
+        top_subcategories = cache.get('footer_top_subcategories')
+        if not top_subcategories:
+            top_subcategories = list(
+                Category.objects.filter(
+                    parent__isnull=False
+                ).annotate(
+                    active_products_count=Count('products', filter=Q(products__is_active=True))
+                ).order_by('-active_products_count')[:10]
+            )
+            # Сохраняем в кэш на 6 часов (21600 секунд)
+            cache.set('footer_top_subcategories', top_subcategories, 21600)
+
+        context['top_subcategories'] = top_subcategories
 
         # --- 3. СЧЕТЧИКИ ПАГИНАТОРА ---
         paginator = context.get('paginator')
