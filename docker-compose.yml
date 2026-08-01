@@ -12,7 +12,7 @@ services:
     build: .
     env_file:
       - .env
-    command: gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 60
+    command: gunicorn --chdir src core.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 60
     volumes:
       - .:/app
     ports:
